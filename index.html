@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Event Photo Access Platform</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+body { font-family: 'Inter', sans-serif; }
+
+.fade-in { animation: fadeIn .4s ease-out; }
+@keyframes fadeIn { from {opacity:0; transform:translateY(10px)} to {opacity:1} }
+
+.spinner {
+  border: 3px solid rgba(255,255,255,.3);
+  border-top: 3px solid white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+[hidden] { display:none !important; }
+</style>
+</head>
+
+<body class="bg-slate-50 min-h-screen flex flex-col">
+
+<!-- NAVBAR -->
+<nav class="bg-white border-b sticky top-0 z-50">
+  <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+    <div class="flex items-center gap-2 cursor-pointer" onclick="showView('guest')">
+      <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+        <i data-lucide="camera" class="w-4 h-4"></i>
+      </div>
+      <span class="font-bold text-lg">Event Photo Access</span>
+    </div>
+    <button onclick="toggleView()" class="border px-4 py-2 rounded-full text-sm flex gap-2">
+      <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+      <span id="toggleText">Photographer</span>
+    </button>
+  </div>
+</nav>
+
+<main class="flex-grow max-w-2xl mx-auto px-4 py-10 w-full">
+
+<!-- GUEST VIEW -->
+<section id="guest-view" class="space-y-8 fade-in">
+  <div class="text-center">
+    <h1 class="text-4xl font-extrabold">Find your photos <span class="text-blue-600">instantly</span></h1>
+    <p class="text-slate-500 mt-2">Upload a selfie to get only your event photos</p>
+  </div>
+
+  <div class="bg-white rounded-3xl p-6 shadow-lg space-y-6">
+    <label class="border-2 border-dashed rounded-2xl h-56 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400">
+      <i data-lucide="upload" class="w-8 h-8 text-slate-400"></i>
+      <p class="text-sm mt-2">Upload or take a selfie</p>
+      <input id="selfieInput" type="file" accept="image/*" capture="user" hidden onchange="handleUpload(event)">
+    </label>
+
+    <div id="previewBox" hidden class="relative w-48 h-48 mx-auto rounded-2xl overflow-hidden">
+      <img id="previewImg" class="w-full h-full object-cover">
+      <button onclick="resetSelfie()" class="absolute top-2 right-2 bg-black/60 text-white p-1 rounded-full">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <button id="searchBtn" disabled onclick="findPhotos()" class="w-full py-4 rounded-2xl bg-slate-200 text-slate-400 font-bold">
+      Find My Photos
+    </button>
+  </div>
+</section>
+
+<!-- RESULTS VIEW -->
+<section id="results-view" hidden class="space-y-6 fade-in">
+  <div class="flex justify-between items-center">
+    <h2 class="text-2xl font-bold">Found <span id="count">0</span> photos</h2>
+    <button onclick="showView('guest')" class="text-blue-600">Search again</button>
+  </div>
+
+  <div id="photoGrid" class="grid gap-4"></div>
+
+  <div class="bg-blue-50 p-4 rounded-xl text-xs text-blue-800">
+    Your face data is used only for this event and never stored.
+  </div>
+</section>
+
+<!-- PHOTOGRAPHER VIEW -->
+<section id="photographer-view" hidden class="fade-in space-y-6">
+  <h1 class="text-3xl font-bold">Photographer Panel</h1>
+  <p class="text-slate-500">Photos uploaded here are auto-processed for guests.</p>
+
+  <div class="bg-blue-600 text-white p-6 rounded-3xl">
+    <h3 class="font-bold text-xl">Automatic Processing</h3>
+    <p class="text-blue-100 mt-2">AI detects faces and enables instant access.</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="border-t py-6 text-center text-xs text-slate-400">
+© 2024 Event Photo Access • Hackathon MVP
+</footer>
+
+<script>
+lucide.createIcons();
+
+let selfieBase64 = null;
+let currentView = "guest";
+let processing = false;
+
+function showView(view) {
+  currentView = view;
+  document.getElementById("guest-view").hidden = view !== "guest";
+  document.getElementById("results-view").hidden = view !== "results";
+  document.getElementById("photographer-view").hidden = view !== "photographer";
+  document.getElementById("toggleText").innerText = view === "photographer" ? "Guest" : "Photographer";
+}
+
+function toggleView() {
+  showView(currentView === "photographer" ? "guest" : "photographer");
+}
+
+function handleUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    selfieBase64 = reader.result;
+    document.getElementById("previewImg").src = selfieBase64;
+    document.getElementById("previewBox").hidden = false;
+
+    const btn = document.getElementById("searchBtn");
+    btn.disabled = false;
+    btn.className = "w-full py-4 rounded-2xl bg-blue-600 text-white font-bold";
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetSelfie() {
+  selfieBase64 = null;
+  document.getElementById("previewBox").hidden = true;
+  const btn = document.getElementById("searchBtn");
+  btn.disabled = true;
+  btn.className = "w-full py-4 rounded-2xl bg-slate-200 text-slate-400 font-bold";
+}
+
+async function findPhotos() {
+  if (!selfieBase64 || processing) return;
+  processing = true;
+
+  const btn = document.getElementById("searchBtn");
+  btn.innerHTML = `<div class="spinner"></div> Processing`;
+
+  const blob = await fetch(selfieBase64).then(r => r.blob());
+  const form = new FormData();
+  form.append("face", blob, "selfie.jpg");
+
+  try {
+    const res = await fetch("http://localhost:5000/match", {
+      method: "POST",
+      body: form
+    });
+
+    const photos = await res.json();
+    renderResults(photos);
+    showView("results");
+  } catch {
+    alert("Backend not reachable");
+  }
+
+  btn.innerHTML = "Find My Photos";
+  processing = false;
+}
+
+function renderResults(photos) {
+  const grid = document.getElementById("photoGrid");
+  grid.innerHTML = "";
+  document.getElementById("count").innerText = photos.length;
+
+  if (photos.length === 0) {
+    grid.innerHTML = "<p class='text-slate-500'>No photos found.</p>";
+    return;
+  }
+
+  photos.forEach(p => {
+    const url = `http://localhost:5000/photos/${p}`;
+    grid.innerHTML += `
+      <div class="relative rounded-2xl overflow-hidden shadow">
+        <img src="${url}" class="w-full">
+        <a href="${url}" download class="absolute bottom-3 right-3 bg-white px-4 py-2 rounded-full font-bold text-sm">Download</a>
+      </div>
+    `;
+  });
+}
+</script>
+</body>
+</html>
